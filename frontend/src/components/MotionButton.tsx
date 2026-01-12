@@ -22,4 +22,4 @@ export default function MotionButton() {
       Generate Code
     </button>
   );
-};
+}

@@ -59,7 +59,8 @@ const Dashboard = () => {
     };
 
     loadConfig();
-  }, [setLoadingConfig, setConfig, addLog]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Subscribe to WebSocket updates when jobId changes
   useEffect(() => {
@@ -98,7 +99,8 @@ const Dashboard = () => {
         }
       };
     }
-  }, [jobId, addLog, setProgress, setDownloadUrl, setIsGenerating, setError]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId]);
 
   // Get options for current step
   const getOptionsForStep = (step: number): Array<{ id: string; label: string; description?: string }> => {
@@ -110,7 +112,7 @@ const Dashboard = () => {
           description: `Generate services for ${domain} domain`,
         }));
 
-      case 2: // Service
+      case 2: { // Service
         if (!selections.domain) return [];
         const availableServices = services.filter((s: Service) => s.domains.includes(selections.domain!));
         return availableServices.map((service: Service) => ({
@@ -118,8 +120,9 @@ const Dashboard = () => {
           label: service.name,
           description: service.description,
         }));
+      }
 
-      case 3: // Stack
+      case 3: { // Stack
         if (!selections.service) return [];
         const selectedService = services.find((s: Service) => s.id === selections.service);
         if (!selectedService) return [];
@@ -128,8 +131,9 @@ const Dashboard = () => {
           label: stack.name,
           description: `Available versions: ${stack.versions.join(", ")}`,
         }));
+      }
 
-      case 4: // Version
+      case 4: { // Version
         if (!selections.service || !selections.stack) return [];
         const service = services.find((s: Service) => s.id === selections.service);
         if (!service) return [];
@@ -140,6 +144,7 @@ const Dashboard = () => {
           label: `Version ${version}`,
           description: `Use ${stack.name} ${version}`,
         }));
+      }
 
       case 5: // Review
         return [
@@ -186,7 +191,8 @@ const Dashboard = () => {
         }, 300);
       }
     },
-    [currentStep, selections, services, setSelection, setCurrentStep, addLog]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentStep, selections, services]
   );
 
   const isSelectionValid = Boolean(

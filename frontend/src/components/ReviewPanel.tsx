@@ -18,6 +18,50 @@ const tabs = [
     { id: 'readme', label: 'README', icon: BookOpen },
 ];
 
+const sortTree = (nodes: FileNode[]): FileNode[] => {
+    return nodes.sort((a, b) => {
+        if (a.type === b.type) return a.name.localeCompare(b.name);
+        return a.type === 'directory' ? -1 : 1;
+    }).map(node => {
+        if (node.children) node.children = sortTree(node.children);
+        return node;
+    });
+};
+
+// Helper to build tree
+const buildFileTree = (paths: string[]): FileNode[] => {
+    const root: FileNode[] = [];
+
+    paths.forEach(path => {
+        const parts = path.split('/');
+        let currentLevel = root;
+
+        parts.forEach((part, index) => {
+            const isFile = index === parts.length - 1;
+            const existingNode = currentLevel.find(n => n.name === part);
+
+            if (existingNode) {
+                if (!isFile && existingNode.children) {
+                    currentLevel = existingNode.children;
+                }
+            } else {
+                const newNode: FileNode = {
+                    name: part,
+                    path: parts.slice(0, index + 1).join('/'),
+                    type: isFile ? 'file' : 'directory',
+                    children: isFile ? undefined : []
+                };
+                currentLevel.push(newNode);
+                if (!isFile && newNode.children) {
+                    currentLevel = newNode.children;
+                }
+            }
+        });
+    });
+
+    return sortTree(root);
+};
+
 const ReviewPanel: React.FC<ReviewPanelProps> = ({ downloadUrl }) => {
     const [activeTab, setActiveTab] = useState<TabType>('structure');
     const [files, setFiles] = useState<Record<string, string>>({});
@@ -25,6 +69,8 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({ downloadUrl }) => {
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+
 
     // Fetch and Unzip
     useEffect(() => {
@@ -81,52 +127,9 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({ downloadUrl }) => {
         return () => { isMounted = false; };
     }, [downloadUrl]);
 
-    // Helper to build tree
-    const buildFileTree = (paths: string[]): FileNode[] => {
-        const root: FileNode[] = [];
 
-        paths.forEach(path => {
-            const parts = path.split('/');
-            let currentLevel = root;
 
-            parts.forEach((part, index) => {
-                const isFile = index === parts.length - 1;
-                const existingNode = currentLevel.find(n => n.name === part);
-
-                if (existingNode) {
-                    if (!isFile && existingNode.children) {
-                        currentLevel = existingNode.children;
-                    }
-                } else {
-                    const newNode: FileNode = {
-                        name: part,
-                        path: parts.slice(0, index + 1).join('/'),
-                        type: isFile ? 'file' : 'directory',
-                        children: isFile ? undefined : []
-                    };
-                    currentLevel.push(newNode);
-                    if (!isFile && newNode.children) {
-                        currentLevel = newNode.children;
-                    }
-                }
-            });
-        });
-
-        return sortTree(root);
-    };
-
-    const sortTree = (nodes: FileNode[]): FileNode[] => {
-        return nodes.sort((a, b) => {
-            if (a.type === b.type) return a.name.localeCompare(b.name);
-            return a.type === 'directory' ? -1 : 1;
-        }).map(node => {
-            if (node.children) node.children = sortTree(node.children);
-            return node;
-        });
-    };
-
-    // Filter content based on active tab
-    const getFilteredFiles = () => {
+    const filteredPaths = useMemo(() => {
         const allPaths = Object.keys(files);
         switch (activeTab) {
             // Config case removed
@@ -140,9 +143,7 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({ downloadUrl }) => {
             default:
                 return allPaths;
         }
-    };
-
-    const filteredPaths = useMemo(() => getFilteredFiles(), [activeTab, files]);
+    }, [activeTab, files]);
 
     // If we switch tabs, select the first file of that type if current selection is not in list
     useEffect(() => {
@@ -151,7 +152,7 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({ downloadUrl }) => {
         } else if (filteredPaths.length > 0 && !selectedFile) {
             setSelectedFile(filteredPaths[0]);
         }
-    }, [activeTab, filteredPaths]);
+    }, [activeTab, filteredPaths, selectedFile]);
 
 
     const getExtension = (path: string) => path.split('.').pop() || 'txt';
