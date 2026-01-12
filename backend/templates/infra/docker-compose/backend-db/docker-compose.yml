@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: {{SERVICE_NAME}}-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:{{SERVICE_NAME}}}
+      POSTGRES_USER: ${DB_USER:postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:postgres}
+    ports:
+      - "${DB_PORT:5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: {{SERVICE_NAME}}
+    environment:
+      PORT: ${PORT:{{PORT}}}
+      NODE_ENV: ${ENV:production}
+      DB_URL: postgresql://${DB_USER:postgres}:${DB_PASSWORD:postgres}@database:5432/${DB_NAME:{{SERVICE_NAME}}}
+      JWT_SECRET: ${JWT_SECRET:{{JWT_SECRET}}}
+    ports:
+      - "${PORT:{{PORT}}}:${PORT:{{PORT}}}"
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:{{PORT}}}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+

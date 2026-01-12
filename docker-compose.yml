@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Gateway Nginx - The only exposed service
+  gateway:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Frontend Service (Internal)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    restart: always
+    # No ports exposed to host
+
+    # Backend Service (Internal)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - CORS_ORIGIN=http://localhost
+      - GENERATED_DIR=/app/generated
+      - TEMP_DIR=/app/temp
+      - TEMPLATES_DIR=/app/templates
+    volumes:
+      # Persist generated files
+      - backend_generated:/app/generated
+      # Mount templates if you want to edit them on host without rebuild, 
+      # otherwise bake them in (which Dockerfile COPY . . does).
+      # For now, let's keep them baked in for immutability.
+    networks:
+      - app-network
+    restart: always
+    # No ports exposed to host
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  backend_generated:
